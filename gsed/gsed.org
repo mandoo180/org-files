@@ -1,0 +1,269 @@
+#+property: header-args :shell :results verbatim
+
+* Learning GNU sed (Stream Line Editor)
+
+#+begin_src emacs-lisp :results none
+  (setq-local org-confirm-babel-evaluate nil)
+  (local-set-key (kbd "C-c C-'") 'org-edit-special)
+  (add-hook 'prog-mode-hook (lambda ()
+                              (if (s-starts-with-p "*Org Src" (buffer-name))
+                                  (local-set-key (kbd "C-c C-'") 'org-edit-src-exit))))
+
+#+end_src
+
+#+begin_src shell
+  printf 'spared no one\npar\nspar\n' | gsed -n '/^sp/p'
+#+end_src
+
+#+RESULTS:
+: spared no one
+: spar
+
+#+begin_src shell
+  printf 'spared no one\npar\nspar\n' | gsed 's/^par$/PAR/'
+#+end_src
+
+#+RESULTS:
+: spared no one
+: PAR
+: spar
+
+#+begin_src shell
+  printf 'spared no one\npar\nspar\n' | gsed 's/^/* /'
+#+end_src
+
+#+RESULTS:
+: *spared no one
+: *par
+: *spar
+
+#+begin_src shell
+  cat example_files/anchors.txt 
+#+end_src
+
+#+RESULTS:
+: sub par
+: spar
+: apparent effort
+: two spare computers
+: cart part tart mart
+
+#+begin_src shell
+  gsed -n '/\bpar/p' example_files/anchors.txt
+#+end_src
+
+#+RESULTS:
+: sub par
+: cart part tart mart
+
+#+begin_src shell
+  gsed -n '/par\b/p' example_files/anchors.txt
+#+end_src
+
+#+RESULTS:
+: sub par
+: spar
+
+#+begin_src shell
+  gsed -n '/par\B/p' example_files/anchors.txt
+#+end_src
+
+#+RESULTS:
+: apparent effort
+: two spare computers
+: cart part tart mart
+
+#+begin_src shell
+  echo 'copper' | gsed 's/\b/:/g'
+#+end_src
+
+#+RESULTS:
+: :copper:
+
+#+begin_src shell
+  echo 'copper' | gsed 's/\B/:/g'
+#+end_src
+
+#+RESULTS:
+: c:o:p:p:e:r
+
+#+begin_src shell
+  gsed -n '/two\|sub/p' example_files/anchors.txt
+#+end_src
+
+#+RESULTS:
+: sub par
+: two spare computers
+
+#+begin_src shell
+  echo 'cats dog bee parrot foxed' | gsed -E 's/cat|dog|fox/--/g'
+#+end_src
+
+#+RESULTS:
+: --s -- bee parrot --ed
+
+#+begin_src shell
+  gsed -nE '/\bpar\b|s$/p' example_files/anchors.txt
+#+end_src
+
+#+RESULTS:
+: sub par
+: two spare computers
+
+#+begin_src shell
+  echo 'cats dogs bee parrot foxed' | gsed -E 's/bee|parrot|at/--/'
+#+end_src
+
+#+RESULTS:
+: c--s dogs bee parrot foxed
+
+#+begin_src shell
+  # longest match wins
+  echo 'spared party parent' | gsed -E 's/spa|spared/**/g'
+#+end_src
+
+#+RESULTS:
+: ** party parent
+
+#+begin_src shell
+  # grouping
+  # a(a+c)d = abd+acd
+
+  printf 'red\nreform\nread\narrest\n' | gsed -nE '/reform|rest/p'
+  echo
+  printf 'red\nreform\nread\narrest\n' | gsed -nE '/re(form|st)/p'
+#+end_src
+
+#+RESULTS:
+: reform
+: arrest
+: 
+: reform
+: arrest
+
+#+begin_src shell
+  #BRE basic regualr expression
+  echo 'a^2 + b^2 - C*3' | gsed -n '/b^2/p'
+  echo '$a = $b + $c' | gsed -n '/$b/p'
+  echo '$a = $b + $c' | gsed 's/\$//g'
+  printf '(a/b) + c\n3 + (a/b) - c\n' | gsed -n '/^(a\/b)/p'
+
+  #ERE extented regular expression
+  printf '(a/b) + c\n3 + (a/b) -c\n' | gsed -nE '/^\(a\/b\)/p'
+
+#+end_src
+
+#+RESULTS:
+: a^2 + b^2 - C*3
+: $a = $b + $c
+: a = b + c
+: (a/b) + c
+: (a/b) + c
+
+#+begin_src shell
+  # using different delimiters
+  echo '/home/learnbyexample/reports' | gsed 's/\/home\/learnbyexample\//~\//'
+  echo '/home/learnbyexample/reports' | gsed 's#/home/learnbyexample/#~/#'
+#+end_src
+
+#+RESULTS:
+: ~/reports
+: ~/reports
+
+#+begin_src shell
+  # the dot meta character
+  echo 'tac tin cot abc:tyz excited' | gsed 's/c.t/-/g'
+
+  # any character followed by 3 and again any character
+  printf '42\t35\n' | gsed 's/.3.//'
+
+  # N command is handy here to show that . matches \n as well
+  printf 'abc\nxyz\n' | gsed 'N; s/c.x/ /'
+#+end_src
+
+#+RESULTS:
+: ta-in - ab-yz ex-ed
+: 42
+: ab yz
+
+#+begin_src shell
+  # same as: sed -nE '/cot|cut/p' and sed -nE '/c(o|u)t/p'
+  printf 'cute\ncat\ncot\ncoat\ncost\nscuttle\n' | gsed -n '/c[ou]t/p'
+#+end_src
+
+#+RESULTS:
+: cute
+: cot
+: scuttle
+
+#+begin_src shell
+  # same as: sed -nE '/.(a|e|o)+t/p'
+  printf 'meeting\ncute\nboat\nat\nfoot\n' | gsed -nE '/.[aeo]+t/p'
+#+end_src
+
+#+RESULTS:
+: meeting
+: boat
+: foot
+
+#+begin_src shell
+  sed -nE '/^[on]{2,}$/p' example_files/words.txt
+#+end_src
+
+#+RESULTS:
+: no
+: non
+: noon
+: on
+
+#+begin_src shell
+  echo 'Sample123String42with777numbers' | sed -E 's/[0-9]+/-/g'
+#+end_src
+
+#+RESULTS:
+: Sample-String-with-numbers
+
+#+begin_src shell
+  # n >= 100 /w optional leading zeros
+  echo '0501 035 154 12 26 98234' | gsed -E 's/\b0*[1-9][0-9]{2,}\b/X/g'
+#+end_src
+
+#+RESULTS:
+: X 035 X 12 26 X
+
+#+begin_src shell
+  # replace all non-digits
+  echo 'Sample1234string42width777numbers' | gsed -E 's/[^0-9]+/-/g'
+#+end_src
+
+#+RESULTS:
+: -1234-42-777-
+
+#+begin_src shell
+  # delete last two columns based on a delimiter
+  echo 'foo:123:bar:baz' | sed -E 's/(:[^:]+){2}$//'
+#+end_src
+
+#+RESULTS:
+: foo:123
+
+#+begin_src shell
+  echo 'I like "mango" and "guava"' | gsed -E 's/"[^"]+"/X/g'
+#+end_src
+
+#+RESULTS:
+: I like X and X
+
+
+=\w= equals =[a-zA-Z0-9_]=
+=\W= matches all non-word characters
+=\s= matches all whitespace characters
+=\S= matches all non-whitespace characters
+
+all above assume ASCII input
+
+#+begin_src shell
+
+#+end_src
+
+
